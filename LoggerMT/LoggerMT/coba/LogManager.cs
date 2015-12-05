@@ -22,7 +22,7 @@ namespace coba
     Queue<_thread_info> _waiting_threads = new Queue<_thread_info>();
     List<Thread> _running_threads = new List<Thread>();
 
-    int _max_running_threads = 100;
+    int _max_running_threads = 1000;
     int _thread_id = 0;
     private object _locker = new object();
     public LogManager()

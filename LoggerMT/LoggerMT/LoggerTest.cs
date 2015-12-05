@@ -15,9 +15,9 @@ namespace LoggerMT
     }
     public static void Run()
     {
-      int thread_count = 1500;
+      int thread_count = 5000;
       int max_steps_in_thread = 10;
-      int max_sleep_time = 1500;
+      int max_sleep_time = 60 * 1000;
 
       Random rnd = new Random();
       for (int i = 0; i < thread_count; i++)
