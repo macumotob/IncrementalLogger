@@ -13,18 +13,21 @@ namespace coba
   public class Logger
   {
     public static Logger Instance = new Logger("test");
-    public Logger(string prefix, long max_size_in_kb = 128)
+    public Logger(string prefix, long max_size_in_kb = 128, string folder = null)
     {
       Debug.Assert(!string.IsNullOrEmpty(prefix));
       Debug.Assert(max_size_in_kb > 64);
+
       _prefix = prefix;
       _file_name_base = GetDateFileName(_prefix);
       _max_file_size = 1024 * max_size_in_kb;
+      _folder = string.IsNullOrEmpty(folder) ? AppDomain.CurrentDomain.BaseDirectory : folder;
     }
     Exception _exception;
     volatile object _locker = new object();
     private string _file_name_base = null;
     private string _prefix;
+    private string _folder;
     ~Logger()
     {
     }
@@ -61,11 +64,11 @@ namespace coba
     }
     private string _create_file_name()
     {
-      string folder = AppDomain.CurrentDomain.BaseDirectory;
-      folder = folder.Replace("\\bin\\Debug", "");
-      string file = folder + GetDateFileName(_prefix) + ".txt";
+     // string folder = AppDomain.CurrentDomain.BaseDirectory;
+     // folder = folder.Replace("\\bin\\Debug", "");
+      string file = _folder + GetDateFileName(_prefix) + ".txt";
       int index = _find_max_index(file);
-      string ff = folder + _make_file_name(index);
+      string ff = _folder + _make_file_name(index);
       if (File.Exists(ff))
       {
         file = ff;
@@ -79,10 +82,20 @@ namespace coba
           index = _find_max_index(file);
 
           index++;
-          file = folder + _make_file_name(index);
+          file = _folder + _make_file_name(index);
         }
       }
       return file;
+    }
+    private string _make_line_header()
+    {
+      DateTime dt = DateTime.Now;
+
+      string s = string.Format(
+        "{0,2:D2}.{1,2:D2}.{2,4:D4} {3,2:D2}:{4,2:D2}:{5,2:D2}.{6,3:D3}/{7}\t",
+        dt.Day, dt.Month, dt.Year, dt.Hour, dt.Minute, dt.Second, dt.Millisecond,
+        Thread.CurrentThread.ManagedThreadId);
+      return s;
     }
     private void _log(string text)
     {
@@ -91,13 +104,7 @@ namespace coba
         lock (_locker)
         {
           string file = _create_file_name();
-
-          DateTime dt = DateTime.Now;
-
-          string s = string.Format("{0,2:D2}.{1,2:D2}.{2,4:D4} {3,2:D2}:{4,2:D2}:{5,2:D2}.{6,3:D3}/{7}\t",
-            dt.Day, dt.Month, dt.Year, dt.Hour, dt.Minute, dt.Second, dt.Millisecond,
-            Thread.CurrentThread.ManagedThreadId);
-
+          string s = _make_line_header();
           s += text + Environment.NewLine;
           File.AppendAllText(file, s);
         }
@@ -105,6 +112,48 @@ namespace coba
       catch (Exception ex)
       {
         _exception = ex;
+      }
+    }
+    private void _log(Exception ex)
+    {
+      Debug.Assert(ex != null);
+
+      try
+      {
+        lock (_locker)
+        {
+          string file = _create_file_name();
+          string header = _make_line_header();
+          string s = header + "\t***\tEXCEPTION\t***" + Environment.NewLine;
+          s += header + "Message:\t" + ex.Message + "\tSource:\t" + ex.Source + "" + Environment.NewLine;
+          s += header + "Stak:\t" + ex.StackTrace + Environment.NewLine;
+          
+          File.AppendAllText(file, s);
+        }
+      }
+      catch (Exception e)
+      {
+        _exception = e;
+      }
+    }
+
+    public void Log(Exception ex)
+    {
+      try
+      {
+        _log(ex);
+      }
+      catch (ThreadAbortException e)
+      {
+        _exception = ex;
+      }
+      catch (Exception e)
+      {
+        _exception = e;
+      }
+      finally
+      {
+        Thread.Sleep(10);
       }
     }
     public void Log(string format, params object[] args)
@@ -116,12 +165,16 @@ namespace coba
       }
       catch (ThreadAbortException ex)
       {
-
+        _exception = ex;
       }
       catch (Exception ex)
       {
+        _exception = ex;
       }
-      Thread.Sleep(10);
+      finally
+      {
+        Thread.Sleep(10);
+      }
     }
   }//end of class
 }

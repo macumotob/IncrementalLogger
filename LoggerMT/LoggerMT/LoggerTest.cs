@@ -10,7 +10,7 @@ namespace LoggerMT
   {
     class dt
     {
-      public int wait;
+      public int sleep;
       public int index;
       public string name;
       public Thread thread;
@@ -18,7 +18,10 @@ namespace LoggerMT
     }
     public static void Run()
     {
-      int thread_count = 10;
+      int thread_count = 200;
+      int max_steps_in_thread = 10;
+      int max_sleep_time = 1500;
+
       Random rnd = new Random();
       for (int i = 0; i < thread_count; i++)
       {
@@ -26,8 +29,8 @@ namespace LoggerMT
         LogManager.Instance.RegisterThread(t);
 
         dt d = new dt();
-        d.wait = rnd.Next(1000);
-        d.times = rnd.Next(10);
+        d.sleep = rnd.Next(1000);
+        d.times = rnd.Next(max_steps_in_thread);
         d.index = i;
         d.name = t.Name;
         d.thread = t;
@@ -35,21 +38,32 @@ namespace LoggerMT
         t.Start(d);
       }
 
-     // Thread.Sleep(13000);
+      // Thread.Sleep(13000);
 
       LogManager.Instance.StopAllThreads();
     }
     private static void _worker(object data)
     {
       dt d = (dt)data;
-      
-      Thread.Sleep(d.wait);
-      Logger.Instance.Log("index:\t{0}\t{1}\t{2}",d.index, d.wait,d.times);
-      for (int i=0; i < d.times; i++)
+
+      Thread.Sleep(d.sleep);
+      Logger.Instance.Log("index:\t{0}\t{1}\t{2}", d.index, d.sleep, d.times);
+      for (int i = 0; i < d.times; i++)
       {
-        Thread.Sleep(d.wait+i);
-          Logger.Instance.Log("THREAD\t{0}\tstep\t{1}", d.name,i);
+        Thread.Sleep(d.sleep + i);
+        if(i == d.times - 2)
+        {
+          try
+          {
+            int x = d.times/( d.times - d.times);
+          }
+          catch(Exception ex)
+          {
+            Logger.Instance.Log(ex);
+          }
+        }
+        Logger.Instance.Log("THREAD\t{0}\tstep\t{1}", d.name, i);
       }
     }
-  }
+  }// end of class
 }
