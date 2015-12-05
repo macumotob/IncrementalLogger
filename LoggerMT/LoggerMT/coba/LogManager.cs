@@ -1,23 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace coba
 {
-  public class LogManager :IDisposable
+  internal class _thread_info
+  {
+    internal Thread thread;
+    internal object data;
+    internal void Run()
+    {
+      thread.Start(data);
+    }
+  }
+  public class LogManager : IDisposable
   {
 
     public static LogManager Instance = new LogManager();
     private Logger _logger = new Logger("mngr");
 
-    Queue<System.Threading.Thread> _activeThreads = new Queue<System.Threading.Thread>();
+    Queue<_thread_info> _waiting_threads = new Queue<_thread_info>();
     List<Thread> _running_threads = new List<Thread>();
 
-    int maxRunningThreads = 1000;
-    int _runningThreadsCount = 0;
+    int _max_running_threads = 100;
+    int _thread_id = 0;
     private object _locker = new object();
     public LogManager()
     {
@@ -27,31 +33,82 @@ namespace coba
     {
       _logger.Log("Log manager destructor.");
     }
-    public void RegisterThread(Thread thread)
+    private void _run_thread_from_queue()
+    {
+      if (_waiting_threads.Count == 0) return;
+      _thread_info info = _waiting_threads.Dequeue();
+      if (info == null)
+      {
+        return;
+      }
+      _running_threads.Add(info.thread);
+      info.thread.Start(info.data);
+
+      _logger.Log("Thread from queue started : {0}", info.thread.Name);
+      info = null;
+
+    }
+    public void RegisterThread(ParameterizedThreadStart ps, object data)
     {
       _free_running_threads_list();
 
       lock (_locker)
       {
-        _runningThreadsCount++;
+        Thread thread = new Thread(ps);
+        _thread_info info = new _thread_info() { thread = thread, data = data };
+
         thread.IsBackground = true;
         if (string.IsNullOrEmpty(thread.Name))
         {
-          thread.Name = string.Format("T{0}", _runningThreadsCount);
+          thread.Name = string.Format("T{0}", _thread_id++);
         }
-        _running_threads.Add(thread);
-        _activeThreads.Enqueue(thread);
+        _waiting_threads.Enqueue(info);
+
+        if (_running_threads.Count >= _max_running_threads)
+        {
+          _logger.Log("Maximum. Thread enqueue : {0}", thread.Name);
+        }
+        else
+        {
+          _run_thread_from_queue();
+        }
         _logger.Log("Register thread {0}", thread.Name);
       }
-     // LaunchWaitingThreads();
-     // while (!done) Thread.Sleep(200);
     }
- private void _free_running_threads_list()
+
+  public void RegisterThread(Thread thread, object data)
+    {
+      _free_running_threads_list();
+
+      lock (_locker)
+      {
+        thread.IsBackground = true;
+        if (string.IsNullOrEmpty(thread.Name))
+        {
+          thread.Name = string.Format("T{0}", _thread_id++);
+        }
+        _thread_info info = new _thread_info() { thread = thread, data = data };
+        _waiting_threads.Enqueue(info);
+
+        if (_running_threads.Count >= _max_running_threads)
+        {
+          _logger.Log("Maximum. Thread enqueue : {0}", thread.Name);
+        }
+        else
+        {
+          _run_thread_from_queue();
+        }
+        _logger.Log("Register thread {0}", thread.Name);
+      }
+      // LaunchWaitingThreads();
+      // while (!done) Thread.Sleep(200);
+    }
+    private void _free_running_threads_list()
     {
       lock (_locker)
       {
         int i = 0;
-        while(i < _running_threads.Count)
+        while (i < _running_threads.Count)
         {
           if (_running_threads[i].IsAlive)
           {
@@ -59,9 +116,14 @@ namespace coba
           }
           else
           {
-            _logger.Log("Thread {0} is alive {1}. REMOVE" ,_running_threads[i].Name,_running_threads[i].IsAlive);
+            _logger.Log("Thread {0} is alive {1}. REMOVE", _running_threads[i].Name, _running_threads[i].IsAlive);
+            _running_threads[i] = null;
             _running_threads.RemoveAt(i);
           }
+        }
+        if (_running_threads.Count < _max_running_threads)
+        {
+          _run_thread_from_queue();
         }
       }
     }
@@ -69,19 +131,17 @@ namespace coba
     {
       lock (_locker)
       {
-        while (_activeThreads.Count > 0)
+        int i = 0;
+        while (_running_threads.Count > 0)
         {
-          Thread thread = _activeThreads.Dequeue();
-          //activeThreads.Add(nextThread.ManagedThreadId, nextThread);
-          // nextThread.Start();
-         // Console.WriteLine("Thread " + thread.Name + " before " + thread.IsAlive);
-
-          //thread.Abort();
-          Thread.Sleep(100);
-          thread.Join();
-          _logger.Log("Thread {0} terminated.", thread.Name);
-         // Console.WriteLine("Thread " + thread.Name + " after " + thread.IsAlive);
+          _free_running_threads_list();
+          //Thread thread = _running_threads[i];
+          Thread.Sleep(10);
+          //thread.Join();
+          //_logger.Log("Thread {0} terminated.", thread.Name);
+          // Console.WriteLine("Thread " + thread.Name + " after " + thread.IsAlive);
         }
+        _logger.Log("Menger : all thread STOPPED!");
       }
     }
 

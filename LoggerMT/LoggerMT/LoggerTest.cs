@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using coba;
 namespace LoggerMT
@@ -18,7 +15,7 @@ namespace LoggerMT
     }
     public static void Run()
     {
-      int thread_count = 200;
+      int thread_count = 1500;
       int max_steps_in_thread = 10;
       int max_sleep_time = 1500;
 
@@ -26,23 +23,25 @@ namespace LoggerMT
       for (int i = 0; i < thread_count; i++)
       {
         Thread t = new Thread(_worker);
-        LogManager.Instance.RegisterThread(t);
-
+     
         dt d = new dt();
-        d.sleep = rnd.Next(1000);
+        d.sleep = rnd.Next(max_sleep_time);
         d.times = rnd.Next(max_steps_in_thread);
         d.index = i;
         d.name = t.Name;
         d.thread = t;
+        // LogManager.Instance.RegisterThread(t, d);
+        ParameterizedThreadStart ps = new ParameterizedThreadStart(_worker);
+        LogManager.Instance.RegisterThread( ps, d);
 
-        t.Start(d);
+        //   t.Start(d);
       }
 
       // Thread.Sleep(13000);
 
       LogManager.Instance.StopAllThreads();
     }
-    private static void _worker(object data)
+    public static void _worker(object data)
     {
       dt d = (dt)data;
 
