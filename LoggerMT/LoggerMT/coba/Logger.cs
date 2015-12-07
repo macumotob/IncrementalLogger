@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 
 using System.Diagnostics;
+using System.Text;
 
 namespace coba
 {
@@ -60,8 +61,8 @@ namespace coba
     }
     private string _create_file_name()
     {
-     // string folder = AppDomain.CurrentDomain.BaseDirectory;
-     // folder = folder.Replace("\\bin\\Debug", "");
+      // string folder = AppDomain.CurrentDomain.BaseDirectory;
+      // folder = folder.Replace("\\bin\\Debug", "");
       string file = _folder + GetDateFileName(_prefix) + ".txt";
       int index = _find_max_index(file);
       string ff = _folder + _make_file_name(index);
@@ -102,7 +103,7 @@ namespace coba
           string file = _create_file_name();
           string s = _make_line_header();
           s += text + Environment.NewLine;
-          File.AppendAllText(file, s);
+          File.AppendAllText(file, s, Encoding.UTF8);
         }
       }
       catch (Exception ex)
@@ -110,7 +111,7 @@ namespace coba
         _exception = ex;
       }
     }
-    private void _log(Exception ex)
+    private void _log(Exception ex, string info = "lazy coder every time lazy coder")
     {
       Debug.Assert(ex != null);
 
@@ -120,11 +121,21 @@ namespace coba
         {
           string file = _create_file_name();
           string header = _make_line_header();
-          string s = header + "\t***\tEXCEPTION\t***" + Environment.NewLine;
+          string s = Environment.NewLine + header + "*** Exception ***" + Environment.NewLine;
+          s += header + info + Environment.NewLine;
           s += header + "Message:\t" + ex.Message + "\tSource:\t" + ex.Source + "" + Environment.NewLine;
-          s += header + "Stak:\t" + ex.StackTrace + Environment.NewLine;
-          
-          File.AppendAllText(file, s);
+          s += header + "Call Stack: ";
+          string[] stacks = ex.StackTrace.Split('\n');
+          foreach (string line in stacks)
+          {
+            string x = line.Replace('\r', ' ');
+            x = x.Replace(" at ", "\n" + header + "at ");
+            x = x.Replace(" in ", "\n" + header + "in ");
+            s += x;
+          }
+          s += Environment.NewLine + Environment.NewLine;
+
+          File.AppendAllText(file, s, Encoding.UTF8);
         }
       }
       catch (Exception e)
@@ -133,15 +144,16 @@ namespace coba
       }
     }
 
-    public void Log(Exception ex)
+    public void Log(Exception ex, string format, params object[] args)
     {
       try
       {
-        _log(ex);
+        string text = string.Format(format, args);
+        _log(ex, text);
       }
       catch (ThreadAbortException e)
       {
-        _exception = e;
+        _exception = ex;
       }
       catch (Exception e)
       {
