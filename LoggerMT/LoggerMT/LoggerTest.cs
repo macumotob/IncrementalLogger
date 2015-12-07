@@ -31,8 +31,8 @@ namespace LoggerMT
         d.name = t.Name;
         d.thread = t;
         // LogManager.Instance.RegisterThread(t, d);
-        ParameterizedThreadStart ps = new ParameterizedThreadStart(_worker);
-        LogManager.Instance.RegisterThread( ps, d);
+       // ParameterizedThreadStart ps = new ParameterizedThreadStart(_worker);
+        LogManager.Instance.RegisterThread( _worker, d);
 
         //   t.Start(d);
       }
@@ -58,7 +58,7 @@ namespace LoggerMT
           }
           catch(Exception ex)
           {
-            Logger.Instance.Log(ex);
+            Logger.Instance.Log(ex,"Деление на 0. Как тест получения исключения.");
           }
         }
         Logger.Instance.Log("THREAD\t{0}\tstep\t{1}", d.name, i);

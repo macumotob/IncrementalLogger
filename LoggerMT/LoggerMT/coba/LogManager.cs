@@ -4,6 +4,8 @@ using System.Threading;
 
 namespace coba
 {
+  public delegate void ThreadWorkerFunction(object data);
+
   internal class _thread_info
   {
     internal Thread thread;
@@ -48,8 +50,10 @@ namespace coba
       info = null;
 
     }
-    public void RegisterThread(ParameterizedThreadStart ps, object data)
+    //public void RegisterThread(ParameterizedThreadStart ps, object data)
+    public void RegisterThread(ThreadWorkerFunction func, object data)
     {
+      ParameterizedThreadStart ps = new ParameterizedThreadStart(func);
       _free_running_threads_list();
 
       lock (_locker)
