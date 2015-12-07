@@ -141,7 +141,7 @@ namespace coba
       }
       catch (ThreadAbortException e)
       {
-        _exception = ex;
+        _exception = e;
       }
       catch (Exception e)
       {

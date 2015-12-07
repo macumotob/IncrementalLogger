@@ -131,15 +131,10 @@ namespace coba
     {
       lock (_locker)
       {
-        int i = 0;
         while (_running_threads.Count > 0)
         {
           _free_running_threads_list();
-          //Thread thread = _running_threads[i];
           Thread.Sleep(10);
-          //thread.Join();
-          //_logger.Log("Thread {0} terminated.", thread.Name);
-          // Console.WriteLine("Thread " + thread.Name + " after " + thread.IsAlive);
         }
         _logger.Log("Menger : all thread STOPPED!");
       }
